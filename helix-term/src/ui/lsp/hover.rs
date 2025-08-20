@@ -7,7 +7,7 @@ use helix_view::graphics::{Margin, Rect, Style};
 use helix_view::input::Event;
 use tui::buffer::Buffer;
 
-use tui::widgets::{BorderType, Paragraph, Widget, Wrap};
+use tui::widgets::{Paragraph, Widget, Wrap};
 
 use crate::compositor::{Component, Context, EventResult};
 
@@ -88,10 +88,9 @@ impl Component for Hover {
 
             // border
             let sep_style = Style::default();
-            let borders = BorderType::line_symbols(BorderType::Plain);
             for x in area.left()..area.right() {
                 if let Some(cell) = surface.get_mut(x, area.top() + HEADER_HEIGHT) {
-                    cell.set_symbol(borders.horizontal()).set_style(sep_style);
+                    cell.set_symbol("-").set_style(sep_style);
                 }
             }
         }

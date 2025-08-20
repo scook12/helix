@@ -6,10 +6,7 @@ use crate::{buffer::Cell, terminal::Config};
 
 use helix_view::graphics::{CursorKind, Rect};
 
-#[cfg(feature = "crossterm")]
-mod crossterm;
-#[cfg(feature = "crossterm")]
-pub use self::crossterm::CrosstermBackend;
+// Crossterm backend removed - now using ratatui::backend::CrosstermBackend directly
 
 mod test;
 pub use self::test::TestBackend;

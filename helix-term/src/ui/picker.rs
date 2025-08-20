@@ -23,7 +23,7 @@ use tui::{
     buffer::Buffer as Surface,
     layout::Constraint,
     text::{Span, Spans},
-    widgets::{BorderType, Cell, Row, Table},
+    widgets::{Cell, Row, Table},
 };
 
 
@@ -722,10 +722,9 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
 
         // -- Separator
         let sep_style = cx.editor.theme.get("ui.background.separator");
-        let borders = BorderType::line_symbols(BorderType::Plain);
         for x in inner.left()..inner.right() {
             if let Some(cell) = surface.get_mut(x, inner.y + 1) {
-                cell.set_symbol(borders.horizontal()).set_style(sep_style);
+                cell.set_symbol("-").set_style(sep_style);
             }
         }
 
