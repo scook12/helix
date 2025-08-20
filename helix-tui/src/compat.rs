@@ -212,8 +212,18 @@ pub mod ratatui_compat {
         ratatui::text::Line::from(ratatui_spans)
     }
     
-    /// Convert helix Text to ratatui Text for Paragraph widgets
-    pub fn convert_text<'a>(helix_text: &'a crate::text::Text<'a>) -> ratatui::text::Text<'a> {
+    /// Convert helix Text to ratatui Text for Paragraph widgets (consuming version)
+    pub fn convert_text<'a>(helix_text: crate::text::Text<'a>) -> ratatui::text::Text<'a> {
+        // Convert each line (Spans) to ratatui Line
+        let ratatui_lines: Vec<ratatui::text::Line> = helix_text.lines
+            .into_iter()
+            .map(|spans| convert_spans_to_line(spans))
+            .collect();
+        ratatui::text::Text::from(ratatui_lines)
+    }
+    
+    /// Convert helix Text to ratatui Text for Paragraph widgets (borrowing version)
+    pub fn convert_text_ref<'a>(helix_text: &'a crate::text::Text<'a>) -> ratatui::text::Text<'a> {
         // Convert each line (Spans) to ratatui Line
         let ratatui_lines: Vec<ratatui::text::Line> = helix_text.lines
             .iter()
@@ -249,6 +259,63 @@ pub mod ratatui_compat {
             crate::widgets::BorderType::Double => ratatui::widgets::BorderType::Double,
             crate::widgets::BorderType::Thick => ratatui::widgets::BorderType::Thick,
         }
+    }
+    
+    /// Convert helix Block to ratatui Block for widgets
+    pub fn convert_block<'a>(block: crate::widgets::Block<'a>) -> ratatui::widgets::Block<'a> {
+        let mut ratatui_block = ratatui::widgets::Block::new();
+        
+        // Convert borders
+        ratatui_block = ratatui_block.borders(convert_borders(block.get_borders()));
+        
+        // Convert border type
+        ratatui_block = ratatui_block.border_type(convert_border_type(block.get_border_type()));
+        
+        // Convert style
+        ratatui_block = ratatui_block.style(convert_style(block.get_style()));
+        
+        // Convert titles (left, center, right)
+        if let Some(title) = block.get_title() {
+            ratatui_block = ratatui_block.title(convert_spans_to_line(title.clone()));
+        }
+        
+        ratatui_block
+    }
+    
+    /// Convert helix Constraint to ratatui Constraint
+    pub fn convert_constraint(constraint: crate::layout::Constraint) -> ratatui::layout::Constraint {
+        match constraint {
+            crate::layout::Constraint::Length(n) => ratatui::layout::Constraint::Length(n),
+            crate::layout::Constraint::Max(n) => ratatui::layout::Constraint::Max(n),
+            crate::layout::Constraint::Min(n) => ratatui::layout::Constraint::Min(n),
+            crate::layout::Constraint::Percentage(n) => ratatui::layout::Constraint::Percentage(n),
+            crate::layout::Constraint::Ratio(a, b) => ratatui::layout::Constraint::Ratio(a, b),
+        }
+    }
+    
+    /// Convert slice of helix Constraints to ratatui Constraints
+    pub fn convert_constraints(constraints: &[crate::layout::Constraint]) -> Vec<ratatui::layout::Constraint> {
+        constraints.iter().map(|c| convert_constraint(*c)).collect()
+    }
+    
+    /// Convert helix TableState to ratatui TableState
+    pub fn convert_table_state(state: &crate::widgets::TableState) -> ratatui::widgets::TableState {
+        let mut ratatui_state = ratatui::widgets::TableState::default();
+        ratatui_state.select(state.selected);
+        // Note: ratatui TableState doesn't have a direct offset setter
+        // We'll need to use scroll_to methods for proper scrolling behavior
+        if let Some(selected) = state.selected {
+            // Use select to set both selected index and handle scrolling
+            ratatui_state.select(Some(selected));
+        }
+        ratatui_state
+    }
+    
+    /// Update helix TableState from ratatui TableState
+    pub fn update_table_state_from_ratatui(helix_state: &mut crate::widgets::TableState, ratatui_state: &ratatui::widgets::TableState) {
+        helix_state.selected = ratatui_state.selected();
+        // Note: ratatui TableState doesn't expose offset publicly
+        // This will be handled through the selection mechanism
     }
     
     /// Render a ratatui widget with buffer conversion

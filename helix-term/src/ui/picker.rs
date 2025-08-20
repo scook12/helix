@@ -23,8 +23,11 @@ use tui::{
     buffer::Buffer as Surface,
     layout::Constraint,
     text::{Span, Spans},
-    widgets::{Block, BorderType, Cell, Row, Table},
+    widgets::{Block, BorderType, Cell, Row},
 };
+
+#[cfg(not(feature = "ratatui-migration"))]
+use tui::widgets::Table;
 
 use tui::widgets::Widget;
 
@@ -823,49 +826,110 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             }))
         });
 
-        let mut table = Table::new(options)
-            .style(text_style)
-            .highlight_style(selected)
-            .highlight_symbol(" > ")
-            .column_spacing(1)
-            .widths(&self.widths);
+        #[cfg(not(feature = "ratatui-migration"))]
+        {
+            let mut table = Table::new(options)
+                .style(text_style)
+                .highlight_style(selected)
+                .highlight_symbol(" > ")
+                .column_spacing(1)
+                .widths(&self.widths);
 
-        // -- Header
-        if self.columns.len() > 1 {
-            let active_column = self.query.active_column(self.prompt.position());
-            let header_style = cx.editor.theme.get("ui.picker.header");
-            let header_column_style = cx.editor.theme.get("ui.picker.header.column");
+            // -- Header
+            if self.columns.len() > 1 {
+                let active_column = self.query.active_column(self.prompt.position());
+                let header_style = cx.editor.theme.get("ui.picker.header");
+                let header_column_style = cx.editor.theme.get("ui.picker.header.column");
 
-            table = table.header(
-                Row::new(self.columns.iter().map(|column| {
-                    if column.hidden {
-                        Cell::default()
-                    } else {
-                        let style =
-                            if active_column.is_some_and(|name| Arc::ptr_eq(name, &column.name)) {
-                                cx.editor.theme.get("ui.picker.header.column.active")
-                            } else {
-                                header_column_style
-                            };
+                table = table.header(
+                    Row::new(self.columns.iter().map(|column| {
+                        if column.hidden {
+                            Cell::default()
+                        } else {
+                            let style =
+                                if active_column.is_some_and(|name| Arc::ptr_eq(name, &column.name)) {
+                                    cx.editor.theme.get("ui.picker.header.column.active")
+                                } else {
+                                    header_column_style
+                                };
 
-                        Cell::from(Span::styled(Cow::from(&*column.name), style))
-                    }
-                }))
-                .style(header_style),
+                            Cell::from(Span::styled(Cow::from(&*column.name), style))
+                        }
+                    }))
+                    .style(header_style),
+                );
+            }
+
+            use tui::widgets::TableState;
+
+            table.render_table(
+                inner,
+                surface,
+                &mut TableState {
+                    offset: 0,
+                    selected: Some(cursor as usize),
+                },
+                self.truncate_start,
             );
         }
+        
+        #[cfg(feature = "ratatui-migration")]
+        {
+            let mut table = tui::widgets::Table::new(options)
+                .style(text_style)
+                .highlight_style(selected)
+                .highlight_symbol(" > ")
+                .column_spacing(1)
+                .widths(&self.widths);
 
-        use tui::widgets::TableState;
+            // -- Header
+            if self.columns.len() > 1 {
+                let active_column = self.query.active_column(self.prompt.position());
+                let header_style = cx.editor.theme.get("ui.picker.header");
+                let header_column_style = cx.editor.theme.get("ui.picker.header.column");
 
-        table.render_table(
-            inner,
-            surface,
-            &mut TableState {
+                table = table.header(
+                    Row::new(self.columns.iter().map(|column| {
+                        if column.hidden {
+                            Cell::default()
+                        } else {
+                            let style =
+                                if active_column.is_some_and(|name| Arc::ptr_eq(name, &column.name)) {
+                                    cx.editor.theme.get("ui.picker.header.column.active")
+                                } else {
+                                    header_column_style
+                                };
+
+                            Cell::from(Span::styled(Cow::from(&*column.name), style))
+                        }
+                    }))
+                    .style(header_style),
+                );
+            }
+
+            let ratatui_table = table.to_ratatui_table();
+            let mut ratatui_state = tui::compat::ratatui_compat::convert_table_state(&tui::widgets::TableState {
                 offset: 0,
                 selected: Some(cursor as usize),
-            },
-            self.truncate_start,
-        );
+            });
+            
+            // Render with ratatui
+            use ratatui::widgets::StatefulWidget;
+            let ratatui_area = tui::compat::ratatui_compat::convert_rect(inner);
+            let mut ratatui_buffer = ratatui::buffer::Buffer::empty(ratatui_area);
+            ratatui_table.render(ratatui_area, &mut ratatui_buffer, &mut ratatui_state);
+            
+            // Copy back to helix buffer
+            for y in ratatui_area.top()..ratatui_area.bottom() {
+                for x in ratatui_area.left()..ratatui_area.right() {
+                    let ratatui_cell = ratatui_buffer.get(x, y);
+                    if let Some(helix_cell_pos) = surface.get_mut(x, y) {
+                        let helix_cell = tui::compat::ratatui_compat::convert_cell_back(ratatui_cell);
+                        *helix_cell_pos = helix_cell;
+                    }
+                }
+            }
+        }
     }
 
     fn render_preview(&mut self, area: Rect, surface: &mut Surface, cx: &mut Context) {

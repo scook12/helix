@@ -382,10 +382,10 @@ impl Component for Markdown {
         
         #[cfg(feature = "ratatui-migration")]
         {
-            use tui::compat::ratatui_compat::{convert_text, render_ratatui_widget};
+            use tui::compat::ratatui_compat::{convert_text_ref, render_ratatui_widget};
             
             // Convert helix text to ratatui text
-            let ratatui_text = convert_text(&text);
+            let ratatui_text = convert_text_ref(&text);
             let par = ratatui::widgets::Paragraph::new(ratatui_text)
                 .wrap(ratatui::widgets::Wrap { trim: false })
                 .scroll((cx.scroll.unwrap_or_default() as u16, 0));

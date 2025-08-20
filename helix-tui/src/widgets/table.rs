@@ -494,6 +494,68 @@ impl Widget for Table<'_> {
     }
 }
 
+#[cfg(feature = "ratatui-migration")]
+impl<'a> Cell<'a> {
+    /// Convert this helix Cell to a ratatui Cell (accessing private fields)
+    pub fn to_ratatui_cell(self) -> ratatui::widgets::Cell<'a> {
+        use crate::compat::ratatui_compat::{convert_text, convert_style};
+        let ratatui_text = convert_text(self.content);
+        let ratatui_style = convert_style(self.style);
+        ratatui::widgets::Cell::from(ratatui_text).style(ratatui_style)
+    }
+}
+
+#[cfg(feature = "ratatui-migration")]
+impl<'a> Row<'a> {
+    /// Convert this helix Row to a ratatui Row (accessing private fields)
+    pub fn to_ratatui_row(self) -> ratatui::widgets::Row<'a> {
+        use crate::compat::ratatui_compat::convert_style;
+        let ratatui_cells: Vec<ratatui::widgets::Cell> = self.cells
+            .into_iter()
+            .map(|cell| cell.to_ratatui_cell())
+            .collect();
+        let ratatui_style = convert_style(self.style);
+        ratatui::widgets::Row::new(ratatui_cells)
+            .style(ratatui_style)
+            .height(self.height)
+            .bottom_margin(self.bottom_margin)
+    }
+}
+
+#[cfg(feature = "ratatui-migration")]
+impl<'a> Table<'a> {
+    /// Convert this helix Table to a ratatui Table (accessing private fields)
+    pub fn to_ratatui_table(self) -> ratatui::widgets::Table<'a> {
+        use crate::compat::ratatui_compat::{convert_style, convert_constraints, convert_block};
+        
+        let ratatui_rows: Vec<ratatui::widgets::Row> = self.rows
+            .into_iter()
+            .map(|row| row.to_ratatui_row())
+            .collect();
+        
+        let ratatui_constraints = convert_constraints(self.widths);
+        
+        let mut ratatui_table = ratatui::widgets::Table::new(ratatui_rows, ratatui_constraints)
+            .style(convert_style(self.style))
+            .highlight_style(convert_style(self.highlight_style))
+            .column_spacing(self.column_spacing);
+            
+        if let Some(symbol) = self.highlight_symbol {
+            ratatui_table = ratatui_table.highlight_symbol(symbol);
+        }
+        
+        if let Some(block) = self.block {
+            ratatui_table = ratatui_table.block(convert_block(block));
+        }
+        
+        if let Some(header) = self.header {
+            ratatui_table = ratatui_table.header(header.to_ratatui_row());
+        }
+        
+        ratatui_table
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

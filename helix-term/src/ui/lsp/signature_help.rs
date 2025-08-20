@@ -15,7 +15,7 @@ use tui::{
 };
 
 #[cfg(feature = "ratatui-migration")]
-use tui::compat::ratatui_compat::{convert_text, render_ratatui_widget};
+use tui::compat::ratatui_compat::{convert_text_ref, render_ratatui_widget};
 
 use crate::compositor::{Component, Compositor, Context, EventResult};
 
@@ -145,7 +145,7 @@ impl Component for SignatureHelp {
             
             #[cfg(feature = "ratatui-migration")]
             {
-                let ratatui_text = convert_text(&text);
+                let ratatui_text = convert_text_ref(&text);
                 let paragraph = ratatui::widgets::Paragraph::new(ratatui_text)
                     .alignment(ratatui::layout::Alignment::Right);
                 render_ratatui_widget(paragraph, render_area, surface);
@@ -168,7 +168,7 @@ impl Component for SignatureHelp {
         
         #[cfg(feature = "ratatui-migration")]
         let (sig_text_area, _sig_text_height) = {
-            let ratatui_text = convert_text(&sig_text);
+            let ratatui_text = convert_text_ref(&sig_text);
             let sig_text_para = ratatui::widgets::Paragraph::new(ratatui_text)
                 .wrap(ratatui::widgets::Wrap { trim: false })
                 .scroll(scroll_offset);
@@ -211,7 +211,7 @@ impl Component for SignatureHelp {
         
         #[cfg(feature = "ratatui-migration")]
         {
-            let ratatui_text = convert_text(&sig_doc);
+            let ratatui_text = convert_text_ref(&sig_doc);
             let sig_doc_para = ratatui::widgets::Paragraph::new(ratatui_text)
                 .wrap(ratatui::widgets::Wrap { trim: false })
                 .scroll(scroll_offset);

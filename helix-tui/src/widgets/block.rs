@@ -102,6 +102,23 @@ impl<'a> Block<'a> {
         self
     }
 
+    // Public accessor methods for compatibility layer
+    pub fn get_borders(&self) -> Borders {
+        self.borders
+    }
+
+    pub fn get_border_type(&self) -> BorderType {
+        self.border_type
+    }
+
+    pub fn get_style(&self) -> Style {
+        self.style
+    }
+
+    pub fn get_title(&self) -> Option<&Spans<'a>> {
+        self.title.as_ref()
+    }
+
     /// Compute the inner area of a block based on its border visibility rules.
     pub fn inner(&self, area: Rect) -> Rect {
         let mut inner = area;

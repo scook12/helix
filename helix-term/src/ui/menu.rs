@@ -2,7 +2,11 @@ use crate::{
     compositor::{Callback, Component, Compositor, Context, Event, EventResult},
     ctrl, key, shift,
 };
+#[cfg(not(feature = "ratatui-migration"))]
 use tui::{buffer::Buffer as Surface, widgets::Table};
+
+#[cfg(feature = "ratatui-migration")]
+use tui::buffer::Buffer as Surface;
 
 pub use tui::widgets::{Cell, Row};
 
@@ -315,23 +319,52 @@ impl<T: Item + 'static> Component for Menu<T> {
         let rows = options
             .iter()
             .map(|option| option.format(&self.editor_data));
-        let table = Table::new(rows)
-            .style(style)
-            .highlight_style(selected)
-            .column_spacing(1)
-            .widths(&self.widths);
-
-        use tui::widgets::TableState;
-
-        table.render_table(
-            area.clip_left(Self::LEFT_PADDING as u16).clip_right(1),
-            surface,
-            &mut TableState {
-                offset: scroll,
-                selected: self.cursor,
-            },
-            false,
-        );
+        let render_area = area.clip_left(Self::LEFT_PADDING as u16).clip_right(1);
+        let mut table_state = tui::widgets::TableState {
+            offset: scroll,
+            selected: self.cursor,
+        };
+        
+        #[cfg(not(feature = "ratatui-migration"))]
+        {
+            let table = Table::new(rows)
+                .style(style)
+                .highlight_style(selected)
+                .column_spacing(1)
+                .widths(&self.widths);
+            table.render_table(render_area, surface, &mut table_state, false);
+        }
+        
+        #[cfg(feature = "ratatui-migration")]
+        {
+            let table = tui::widgets::Table::new(rows)
+                .style(style)
+                .highlight_style(selected)
+                .column_spacing(1)
+                .widths(&self.widths);
+            let ratatui_table = table.to_ratatui_table();
+            let mut ratatui_state = tui::compat::ratatui_compat::convert_table_state(&table_state);
+            
+            // Render with ratatui
+            use ratatui::widgets::StatefulWidget;
+            let ratatui_area = tui::compat::ratatui_compat::convert_rect(render_area);
+            let mut ratatui_buffer = ratatui::buffer::Buffer::empty(ratatui_area);
+            ratatui_table.render(ratatui_area, &mut ratatui_buffer, &mut ratatui_state);
+            
+            // Copy back to helix buffer
+            for y in ratatui_area.top()..ratatui_area.bottom() {
+                for x in ratatui_area.left()..ratatui_area.right() {
+                    let ratatui_cell = ratatui_buffer.get(x, y);
+                    if let Some(helix_cell_pos) = surface.get_mut(x, y) {
+                        let helix_cell = tui::compat::ratatui_compat::convert_cell_back(ratatui_cell);
+                        *helix_cell_pos = helix_cell;
+                    }
+                }
+            }
+            
+            // Update state
+            tui::compat::ratatui_compat::update_table_state_from_ratatui(&mut table_state, &ratatui_state);
+        }
 
         let render_borders = cx.editor.menu_border();
 

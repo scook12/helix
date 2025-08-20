@@ -9,7 +9,7 @@ use tui::buffer::Buffer;
 
 #[cfg(feature = "ratatui-migration")]
 use {
-    tui::compat::ratatui_compat::{convert_text, render_ratatui_widget},
+    tui::compat::ratatui_compat::{convert_text_ref, render_ratatui_widget},
     tui::widgets::BorderType,
 };
 
@@ -98,7 +98,7 @@ impl Component for Hover {
             
             #[cfg(feature = "ratatui-migration")]
             {
-                let ratatui_text = convert_text(&header);
+                let ratatui_text = convert_text_ref(&header);
                 let header_para = ratatui::widgets::Paragraph::new(ratatui_text);
                 render_ratatui_widget(header_para, area.with_height(HEADER_HEIGHT), surface);
             }
@@ -131,7 +131,7 @@ impl Component for Hover {
         
         #[cfg(feature = "ratatui-migration")]
         {
-            let ratatui_text = convert_text(&contents);
+            let ratatui_text = convert_text_ref(&contents);
             let contents_para = ratatui::widgets::Paragraph::new(ratatui_text)
                 .wrap(ratatui::widgets::Wrap { trim: false })
                 .scroll((cx.scroll.unwrap_or_default() as u16, 0));

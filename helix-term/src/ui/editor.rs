@@ -727,7 +727,7 @@ impl EditorView {
         
         #[cfg(feature = "ratatui-migration")]
         use {
-            tui::compat::ratatui_compat::{convert_text, render_ratatui_widget},
+            tui::compat::ratatui_compat::{convert_text_ref, render_ratatui_widget},
             tui::text::Text,
         };
 
@@ -784,7 +784,7 @@ impl EditorView {
         #[cfg(feature = "ratatui-migration")]
         {
             // Convert helix text to ratatui text
-            let ratatui_text = convert_text(&text);
+            let ratatui_text = convert_text_ref(&text);
             let paragraph = ratatui::widgets::Paragraph::new(ratatui_text)
                 .alignment(ratatui::layout::Alignment::Right)
                 .wrap(ratatui::widgets::Wrap { trim: true });
