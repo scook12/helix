@@ -55,24 +55,87 @@ pub mod adapter {
     where
         B: ratatui::backend::Backend,
     {
-        fn claim(&mut self, _config: Config) -> Result<(), io::Error> {
-            // For ratatui, claiming is handled by the terminal setup
-            // This is a no-op for compatibility
+        fn claim(&mut self, config: Config) -> Result<(), io::Error> {
+            // For ratatui backends, we need to handle terminal setup manually
+            // since ratatui doesn't expose claim/restore methods
+            use crossterm::{
+                terminal::{enable_raw_mode, EnterAlternateScreen},
+                event::{EnableFocusChange, EnableBracketedPaste, EnableMouseCapture},
+                execute,
+            };
+            
+            enable_raw_mode()?;
+            let mut stdout = std::io::stdout();
+            execute!(stdout, EnterAlternateScreen, EnableFocusChange)?;
+            
+            // Enable bracketed paste
+            if let Err(err) = execute!(stdout, EnableBracketedPaste) {
+                if err.kind() != io::ErrorKind::Unsupported {
+                    return Err(err);
+                }
+            }
+            
+            // Enable mouse capture if requested
+            if config.enable_mouse_capture {
+                execute!(stdout, EnableMouseCapture)?;
+            }
+            
             Ok(())
         }
         
-        fn reconfigure(&mut self, _config: Config) -> Result<(), io::Error> {
-            // Configuration changes are handled at the terminal level
+        fn reconfigure(&mut self, config: Config) -> Result<(), io::Error> {
+            // Handle mouse capture configuration changes
+            use crossterm::{event::{EnableMouseCapture, DisableMouseCapture}, execute};
+            
+            let mut stdout = std::io::stdout();
+            if config.enable_mouse_capture {
+                execute!(stdout, EnableMouseCapture)?;
+            } else {
+                execute!(stdout, DisableMouseCapture)?;
+            }
+            
             Ok(())
         }
         
-        fn restore(&mut self, _config: Config) -> Result<(), io::Error> {
-            // Restoration is handled by the terminal cleanup
+        fn restore(&mut self, config: Config) -> Result<(), io::Error> {
+            // Restore terminal to normal state
+            use crossterm::{
+                terminal::{disable_raw_mode, LeaveAlternateScreen},
+                event::{DisableFocusChange, DisableBracketedPaste, DisableMouseCapture},
+                execute,
+            };
+            
+            let mut stdout = std::io::stdout();
+            
+            // Disable mouse capture if it was enabled
+            if config.enable_mouse_capture {
+                execute!(stdout, DisableMouseCapture)?;
+            }
+            
+            // Disable other features
+            execute!(stdout, DisableBracketedPaste)?;
+            execute!(stdout, DisableFocusChange, LeaveAlternateScreen)?;
+            
+            disable_raw_mode()?;
             Ok(())
         }
         
         fn force_restore() -> Result<(), io::Error> {
-            // Force restore is a terminal-level operation
+            // Force restore - ignore errors and restore as much as possible
+            use crossterm::{
+                terminal::{disable_raw_mode, LeaveAlternateScreen},
+                event::{DisableFocusChange, DisableBracketedPaste, DisableMouseCapture},
+                execute,
+            };
+            
+            let mut stdout = std::io::stdout();
+            
+            // Ignore individual errors but try to restore everything
+            let _ = execute!(stdout, DisableMouseCapture);
+            let _ = execute!(stdout, DisableBracketedPaste);
+            let _ = execute!(stdout, DisableFocusChange, LeaveAlternateScreen);
+            let _ = disable_raw_mode();
+            
             Ok(())
         }
         
