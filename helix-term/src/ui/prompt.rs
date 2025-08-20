@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::{borrow::Cow, ops::RangeFrom};
 use tui::buffer::Buffer as Surface;
 use tui::text::Span;
+#[cfg(not(feature = "ratatui-migration"))]
 use tui::widgets::{Block, Widget};
 
 use helix_core::{
@@ -496,13 +497,11 @@ impl Prompt {
             let background = theme.get("ui.help");
             surface.clear_with(area, background);
 
-            let block = Block::bordered()
-                // .title(self.title.as_str())
-                .border_style(background);
+            let block = super::widget_compat::bordered_block();
 
-            let inner = block.inner(area).inner(Margin::horizontal(1));
+            let inner = super::widget_compat::get_block_inner_area(&block, area).inner(Margin::horizontal(1));
 
-            block.render(area, surface);
+            super::widget_compat::render_block_widget(block, area, surface);
             text.render(inner, surface, cx);
         }
 
