@@ -13,7 +13,7 @@ homepage.workspace = true
 
 [features]
 default = ["crossterm"]
-ratatui-migration = ["ratatui"]
+ratatui-migration = ["ratatui", "crossterm"]
 crossterm = ["dep:crossterm"]
 
 [dependencies]

@@ -44,17 +44,23 @@ use {signal_hook::consts::signal, signal_hook_tokio::Signals};
 #[cfg(windows)]
 type Signals = futures_util::stream::Empty<()>;
 
-#[cfg(not(feature = "integration"))]
+#[cfg(all(not(feature = "integration"), not(feature = "ratatui-migration")))]
 use tui::backend::CrosstermBackend;
 
 #[cfg(feature = "integration")]
 use tui::backend::TestBackend;
 
-#[cfg(not(feature = "integration"))]
+#[cfg(feature = "ratatui-migration")]
+use tui::backend::RatatuiBackendAdapter;
+
+#[cfg(all(not(feature = "integration"), not(feature = "ratatui-migration")))]
 type TerminalBackend = CrosstermBackend<std::io::Stdout>;
 
 #[cfg(feature = "integration")]
 type TerminalBackend = TestBackend;
+
+#[cfg(feature = "ratatui-migration")]
+type TerminalBackend = RatatuiBackendAdapter<ratatui::backend::CrosstermBackend<std::io::Stdout>>;
 
 type Terminal = tui::terminal::Terminal<TerminalBackend>;
 
@@ -103,11 +109,18 @@ impl Application {
         theme_parent_dirs.extend(helix_loader::runtime_dirs().iter().cloned());
         let theme_loader = theme::Loader::new(&theme_parent_dirs);
 
-        #[cfg(not(feature = "integration"))]
+        #[cfg(all(not(feature = "integration"), not(feature = "ratatui-migration")))]
         let backend = CrosstermBackend::new(stdout(), &config.editor);
 
         #[cfg(feature = "integration")]
         let backend = TestBackend::new(120, 150);
+
+        #[cfg(feature = "ratatui-migration")]
+        let backend = {
+            let ratatui_backend = ratatui::backend::CrosstermBackend::new(stdout());
+            RatatuiBackendAdapter::new(ratatui_backend)
+                .expect("Failed to create ratatui backend adapter")
+        };
 
         let terminal = Terminal::new(backend)?;
         let area = terminal.size().expect("couldn't get terminal size");
