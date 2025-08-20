@@ -19,15 +19,7 @@ pub fn render_table<'a>(
     state: &mut TableState,
     _truncate_start: bool,
 ) {
-    #[cfg(not(feature = "ratatui-migration"))]
-    {
-        // Use the original helix_tui Table rendering
-        table.render_table(area, surface, state, _truncate_start);
-    }
-    
-    #[cfg(feature = "ratatui-migration")]
-    {
-        // Convert to ratatui and render
+    // Convert to ratatui and render
         let ratatui_table = table.to_ratatui_table();
         let mut ratatui_state = tui::compat::ratatui_compat::convert_table_state(state);
         
@@ -57,7 +49,6 @@ pub fn render_table<'a>(
         
         // Update state
         tui::compat::ratatui_compat::update_table_state_from_ratatui(state, &ratatui_state);
-    }
 }
 
 /// Helper to create a TableState with the given parameters

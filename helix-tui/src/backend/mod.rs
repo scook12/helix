@@ -14,9 +14,7 @@ pub use self::crossterm::CrosstermBackend;
 mod test;
 pub use self::test::TestBackend;
 
-#[cfg(feature = "ratatui-migration")]
 mod ratatui;
-#[cfg(feature = "ratatui-migration")]
 pub use self::ratatui::adapter::RatatuiBackendAdapter;
 
 /// Representation of a terminal backend.

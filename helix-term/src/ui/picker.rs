@@ -26,8 +26,6 @@ use tui::{
     widgets::{BorderType, Cell, Row, Table},
 };
 
-#[cfg(not(feature = "ratatui-migration"))]
-use tui::widgets::{Block, Widget};
 
 use std::{
     borrow::Cow,
@@ -727,7 +725,7 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         let borders = BorderType::line_symbols(BorderType::Plain);
         for x in inner.left()..inner.right() {
             if let Some(cell) = surface.get_mut(x, inner.y + 1) {
-                cell.set_symbol(borders.horizontal).set_style(sep_style);
+                cell.set_symbol(borders.horizontal()).set_style(sep_style);
             }
         }
 

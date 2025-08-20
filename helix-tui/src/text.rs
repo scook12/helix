@@ -478,3 +478,10 @@ impl<'a> Extend<Spans<'a>> for Text<'a> {
         self.lines.extend(iter);
     }
 }
+
+// Add From<&Text<'a>> for Text<'a> for compatibility with Paragraph::new()
+impl<'a> From<&Text<'a>> for Text<'a> {
+    fn from(text: &Text<'a>) -> Text<'a> {
+        text.clone()
+    }
+}

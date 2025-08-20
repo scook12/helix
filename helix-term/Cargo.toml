@@ -35,7 +35,6 @@ default = ["git"]
 unicode-lines = ["helix-core/unicode-lines", "helix-view/unicode-lines"]
 integration = ["helix-event/integration_test"]
 git = ["helix-vcs/git"]
-ratatui-migration = ["tui/ratatui-migration", "dep:ratatui"]
 
 [[bin]]
 name = "hx"
@@ -56,7 +55,7 @@ once_cell = "1.21"
 
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "io-util", "io-std", "time", "process", "macros", "fs", "parking_lot"] }
 tui = { path = "../helix-tui", package = "helix-tui", default-features = false, features = ["crossterm"] }
-ratatui = { version = "0.26", optional = true, default-features = false, features = ["crossterm"] }
+ratatui = { version = "0.26", default-features = false, features = ["crossterm"] }
 crossterm = { version = "0.28", features = ["event-stream"] }
 signal-hook = "0.3"
 tokio-stream = "0.1"

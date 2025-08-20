@@ -371,26 +371,11 @@ impl Component for Markdown {
         let margin = Margin::all(1);
         let inner_area = area.inner(margin);
 
-        #[cfg(not(feature = "ratatui-migration"))]
-        {
-            use tui::widgets::{Paragraph, Widget, Wrap};
-            let par = Paragraph::new(&text)
-                .wrap(Wrap { trim: false })
-                .scroll((cx.scroll.unwrap_or_default() as u16, 0));
-            par.render(inner_area, surface);
-        }
-        
-        #[cfg(feature = "ratatui-migration")]
-        {
-            use tui::compat::ratatui_compat::{convert_text_ref, render_ratatui_widget};
-            
-            // Convert helix text to ratatui text
-            let ratatui_text = convert_text_ref(&text);
-            let par = ratatui::widgets::Paragraph::new(ratatui_text)
-                .wrap(ratatui::widgets::Wrap { trim: false })
-                .scroll((cx.scroll.unwrap_or_default() as u16, 0));
-            render_ratatui_widget(par, inner_area, surface);
-        }
+        use tui::widgets::{Paragraph, Widget, Wrap};
+        let par = Paragraph::new(&text)
+            .wrap(Wrap { trim: false })
+            .scroll((cx.scroll.unwrap_or_default() as u16, 0));
+        par.render(inner_area, surface);
     }
 
     fn required_size(&mut self, viewport: (u16, u16)) -> Option<(u16, u16)> {

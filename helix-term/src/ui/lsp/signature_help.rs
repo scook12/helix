@@ -8,14 +8,7 @@ use tui::buffer::Buffer;
 use tui::text::Text;
 use tui::widgets::BorderType;
 
-#[cfg(not(feature = "ratatui-migration"))]
-use tui::{
-    layout::Alignment,
-    widgets::{Paragraph, Widget, Wrap},
-};
-
-#[cfg(feature = "ratatui-migration")]
-use tui::compat::ratatui_compat::{convert_text_ref, render_ratatui_widget};
+use tui::widgets::{Paragraph, Widget, Wrap, Alignment};
 
 use crate::compositor::{Component, Compositor, Context, EventResult};
 
@@ -137,47 +130,20 @@ impl Component for SignatureHelp {
             let text = Text::from(signature_index);
             let render_area = area.with_height(1).clip_right(1);
             
-            #[cfg(not(feature = "ratatui-migration"))]
-            {
-                let paragraph = Paragraph::new(&text).alignment(Alignment::Right);
-                paragraph.render(render_area, surface);
-            }
-            
-            #[cfg(feature = "ratatui-migration")]
-            {
-                let ratatui_text = convert_text_ref(&text);
-                let paragraph = ratatui::widgets::Paragraph::new(ratatui_text)
-                    .alignment(ratatui::layout::Alignment::Right);
-                render_ratatui_widget(paragraph, render_area, surface);
-            }
+            let paragraph = Paragraph::new(&text).alignment(Alignment::Right);
+            paragraph.render(render_area, surface);
         }
 
         let scroll_offset = (cx.scroll.unwrap_or_default() as u16, 0);
         
-        #[cfg(not(feature = "ratatui-migration"))]
-        let (sig_text_area, _sig_text_height) = {
-            let sig_text_para = Paragraph::new(&sig_text)
-                .wrap(Wrap { trim: false })
-                .scroll(scroll_offset);
-            let (_, sig_text_height) = sig_text_para.required_size(area.width);
-            let sig_text_area = area.with_height(sig_text_height.min(area.height));
-            let sig_text_area = sig_text_area.intersection(surface.area);
-            sig_text_para.render(sig_text_area, surface);
-            (sig_text_area, sig_text_height)
-        };
-        
-        #[cfg(feature = "ratatui-migration")]
-        let (sig_text_area, _sig_text_height) = {
-            let ratatui_text = convert_text_ref(&sig_text);
-            let sig_text_para = ratatui::widgets::Paragraph::new(ratatui_text)
-                .wrap(ratatui::widgets::Wrap { trim: false })
-                .scroll(scroll_offset);
-            let (_, sig_text_height) = crate::ui::text::required_size(&sig_text, area.width);
-            let sig_text_area = area.with_height(sig_text_height.min(area.height));
-            let sig_text_area = sig_text_area.intersection(surface.area);
-            render_ratatui_widget(sig_text_para, sig_text_area, surface);
-            (sig_text_area, sig_text_height)
-        };
+        let sig_text_para = Paragraph::new(&sig_text)
+            .wrap(Wrap { trim: false })
+            .scroll(scroll_offset);
+        let (_, sig_text_height) = sig_text_para.required_size(area.width);
+        let sig_text_area = area.with_height(sig_text_height.min(area.height));
+        let sig_text_area = sig_text_area.intersection(surface.area);
+        sig_text_para.render(sig_text_area, surface);
+        let (sig_text_area, _sig_text_height) = (sig_text_area, sig_text_height);
 
         if signature.signature_doc.is_none() {
             return;
@@ -187,7 +153,7 @@ impl Component for SignatureHelp {
         let borders = BorderType::line_symbols(BorderType::Plain);
         for x in sig_text_area.left()..sig_text_area.right() {
             if let Some(cell) = surface.get_mut(x, sig_text_area.bottom()) {
-                cell.set_symbol(borders.horizontal).set_style(sep_style);
+                cell.set_symbol(borders.horizontal()).set_style(sep_style);
             }
         }
 
@@ -201,22 +167,10 @@ impl Component for SignatureHelp {
             .clip_bottom(u16::from(cx.editor.popup_border()));
         let scroll_offset = (cx.scroll.unwrap_or_default() as u16, 0);
         
-        #[cfg(not(feature = "ratatui-migration"))]
-        {
-            let sig_doc_para = Paragraph::new(&sig_doc)
-                .wrap(Wrap { trim: false })
-                .scroll(scroll_offset);
-            sig_doc_para.render(sig_doc_area, surface);
-        }
-        
-        #[cfg(feature = "ratatui-migration")]
-        {
-            let ratatui_text = convert_text_ref(&sig_doc);
-            let sig_doc_para = ratatui::widgets::Paragraph::new(ratatui_text)
-                .wrap(ratatui::widgets::Wrap { trim: false })
-                .scroll(scroll_offset);
-            render_ratatui_widget(sig_doc_para, sig_doc_area, surface);
-        }
+        let sig_doc_para = Paragraph::new(&sig_doc)
+            .wrap(Wrap { trim: false })
+            .scroll(scroll_offset);
+        sig_doc_para.render(sig_doc_area, surface);
     }
 
     fn required_size(&mut self, viewport: (u16, u16)) -> Option<(u16, u16)> {
@@ -237,14 +191,8 @@ impl Component for SignatureHelp {
             &self.config_loader.load(),
             None,
         );
-        #[cfg(not(feature = "ratatui-migration"))]
-        let (sig_width, sig_height) = {
-            let sig_text_para = Paragraph::new(&signature_text).wrap(Wrap { trim: false });
-            sig_text_para.required_size(max_text_width)
-        };
-        
-        #[cfg(feature = "ratatui-migration")]
-        let (sig_width, sig_height) = crate::ui::text::required_size(&signature_text, max_text_width);
+        let sig_text_para = Paragraph::new(&signature_text).wrap(Wrap { trim: false });
+        let (sig_width, sig_height) = sig_text_para.required_size(max_text_width);
 
         let (width, height) = match signature.signature_doc {
             Some(ref doc) => {

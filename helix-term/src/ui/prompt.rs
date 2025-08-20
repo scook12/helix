@@ -9,8 +9,6 @@ use std::sync::Arc;
 use std::{borrow::Cow, ops::RangeFrom};
 use tui::buffer::Buffer as Surface;
 use tui::text::Span;
-#[cfg(not(feature = "ratatui-migration"))]
-use tui::widgets::{Block, Widget};
 
 use helix_core::{
     unicode::segmentation::{GraphemeCursor, UnicodeSegmentation},

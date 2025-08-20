@@ -4,10 +4,9 @@
 //! from the helix-tui fork to the ratatui library while maintaining
 //! API compatibility with existing Helix code.
 
-#[cfg(feature = "ratatui-migration")]
 pub mod ratatui_compat {
-    use helix_view::graphics::{Color, Style, Rect, CursorKind};
-    
+    use helix_view::graphics::{Color, CursorKind, Rect, Style};
+
     /// Convert helix graphics Color to ratatui Color
     pub fn convert_color(color: Color) -> ratatui::style::Color {
         match color {
@@ -32,7 +31,7 @@ pub mod ratatui_compat {
             Color::Indexed(i) => ratatui::style::Color::Indexed(i),
         }
     }
-    
+
     /// Convert ratatui Color to helix graphics Color
     pub fn convert_color_back(color: ratatui::style::Color) -> Color {
         match color {
@@ -57,28 +56,28 @@ pub mod ratatui_compat {
             ratatui::style::Color::Indexed(i) => Color::Indexed(i),
         }
     }
-    
+
     /// Convert helix graphics Style to ratatui Style
     pub fn convert_style(style: Style) -> ratatui::style::Style {
         let mut ratatui_style = ratatui::style::Style::default();
-        
+
         if let Some(fg) = style.fg {
             ratatui_style = ratatui_style.fg(convert_color(fg));
         }
-        
+
         if let Some(bg) = style.bg {
             ratatui_style = ratatui_style.bg(convert_color(bg));
         }
-        
+
         // Note: underline_color not available in ratatui 0.26
         // Will be handled in future versions
-        
+
         // Convert modifiers
         ratatui_style = ratatui_style.add_modifier(convert_modifier(style.add_modifier));
-        
+
         ratatui_style
     }
-    
+
     /// Convert helix graphics Rect to ratatui Rect
     pub fn convert_rect(rect: Rect) -> ratatui::layout::Rect {
         ratatui::layout::Rect {
@@ -88,7 +87,7 @@ pub mod ratatui_compat {
             height: rect.height,
         }
     }
-    
+
     /// Convert ratatui Rect to helix graphics Rect
     pub fn convert_rect_back(rect: ratatui::layout::Rect) -> Rect {
         Rect {
@@ -98,14 +97,14 @@ pub mod ratatui_compat {
             height: rect.height,
         }
     }
-    
+
     /// Convert helix CursorKind - will be handled at backend level
     /// For now, just return the original kind for backend processing
     pub fn convert_cursor_kind(kind: CursorKind) -> CursorKind {
         // For now, pass through - backend will handle conversion
         kind
     }
-    
+
     /// Convert helix-tui Cell to ratatui Cell
     pub fn convert_cell(cell: &crate::buffer::Cell) -> ratatui::buffer::Cell {
         let style = convert_style(cell.style());
@@ -114,25 +113,33 @@ pub mod ratatui_compat {
         ratatui_cell.set_style(style);
         ratatui_cell
     }
-    
+
     /// Convert ratatui Cell to helix-tui Cell
     pub fn convert_cell_back(cell: &ratatui::buffer::Cell) -> crate::buffer::Cell {
         use helix_view::graphics::UnderlineStyle;
-        
+
         crate::buffer::Cell {
             symbol: cell.symbol().to_string(),
-            fg: cell.style().fg.map(convert_color_back).unwrap_or(Color::Reset),
-            bg: cell.style().bg.map(convert_color_back).unwrap_or(Color::Reset), 
+            fg: cell
+                .style()
+                .fg
+                .map(convert_color_back)
+                .unwrap_or(Color::Reset),
+            bg: cell
+                .style()
+                .bg
+                .map(convert_color_back)
+                .unwrap_or(Color::Reset),
             modifier: convert_modifier_back(cell.style().add_modifier),
-            underline_color: Color::Reset, // Default fallback
+            underline_color: Color::Reset,          // Default fallback
             underline_style: UnderlineStyle::Reset, // Default fallback
         }
     }
-    
+
     /// Convert helix Modifier to ratatui Modifier
     pub fn convert_modifier(modifier: helix_view::graphics::Modifier) -> ratatui::style::Modifier {
         let mut result = ratatui::style::Modifier::empty();
-        
+
         use helix_view::graphics::Modifier;
         if modifier.contains(Modifier::BOLD) {
             result |= ratatui::style::Modifier::BOLD;
@@ -160,14 +167,16 @@ pub mod ratatui_compat {
         if modifier.contains(Modifier::CROSSED_OUT) {
             result |= ratatui::style::Modifier::CROSSED_OUT;
         }
-        
+
         result
     }
-    
+
     /// Convert ratatui Modifier to helix Modifier
-    pub fn convert_modifier_back(modifier: ratatui::style::Modifier) -> helix_view::graphics::Modifier {
+    pub fn convert_modifier_back(
+        modifier: ratatui::style::Modifier,
+    ) -> helix_view::graphics::Modifier {
         let mut result = helix_view::graphics::Modifier::empty();
-        
+
         use helix_view::graphics::Modifier;
         if modifier.contains(ratatui::style::Modifier::BOLD) {
             result |= Modifier::BOLD;
@@ -195,14 +204,15 @@ pub mod ratatui_compat {
         if modifier.contains(ratatui::style::Modifier::CROSSED_OUT) {
             result |= Modifier::CROSSED_OUT;
         }
-        
+
         result
     }
-    
+
     /// Convert helix Spans to ratatui Line for Block titles
     pub fn convert_spans_to_line(spans: crate::text::Spans<'_>) -> ratatui::text::Line<'_> {
         // Convert helix Spans to ratatui Spans by converting each Span
-        let ratatui_spans: Vec<ratatui::text::Span> = spans.0
+        let ratatui_spans: Vec<ratatui::text::Span> = spans
+            .0
             .into_iter()
             .map(|span| {
                 let style = convert_style(span.style);
@@ -211,27 +221,29 @@ pub mod ratatui_compat {
             .collect();
         ratatui::text::Line::from(ratatui_spans)
     }
-    
+
     /// Convert helix Text to ratatui Text for Paragraph widgets (consuming version)
     pub fn convert_text<'a>(helix_text: crate::text::Text<'a>) -> ratatui::text::Text<'a> {
         // Convert each line (Spans) to ratatui Line
-        let ratatui_lines: Vec<ratatui::text::Line> = helix_text.lines
+        let ratatui_lines: Vec<ratatui::text::Line> = helix_text
+            .lines
             .into_iter()
             .map(|spans| convert_spans_to_line(spans))
             .collect();
         ratatui::text::Text::from(ratatui_lines)
     }
-    
+
     /// Convert helix Text to ratatui Text for Paragraph widgets (borrowing version)
     pub fn convert_text_ref<'a>(helix_text: &'a crate::text::Text<'a>) -> ratatui::text::Text<'a> {
         // Convert each line (Spans) to ratatui Line
-        let ratatui_lines: Vec<ratatui::text::Line> = helix_text.lines
+        let ratatui_lines: Vec<ratatui::text::Line> = helix_text
+            .lines
             .iter()
             .map(|spans| convert_spans_to_line(spans.clone()))
             .collect();
         ratatui::text::Text::from(ratatui_lines)
     }
-    
+
     /// Convert helix Borders to ratatui Borders (both use bitflags)
     pub fn convert_borders(borders: crate::widgets::Borders) -> ratatui::widgets::Borders {
         // Handle compound flags by checking each bit
@@ -250,9 +262,11 @@ pub mod ratatui_compat {
         }
         result
     }
-    
+
     /// Convert helix BorderType to ratatui BorderType
-    pub fn convert_border_type(border_type: crate::widgets::BorderType) -> ratatui::widgets::BorderType {
+    pub fn convert_border_type(
+        border_type: crate::widgets::BorderType,
+    ) -> ratatui::widgets::BorderType {
         match border_type {
             crate::widgets::BorderType::Plain => ratatui::widgets::BorderType::Plain,
             crate::widgets::BorderType::Rounded => ratatui::widgets::BorderType::Rounded,
@@ -260,30 +274,11 @@ pub mod ratatui_compat {
             crate::widgets::BorderType::Thick => ratatui::widgets::BorderType::Thick,
         }
     }
-    
-    /// Convert helix Block to ratatui Block for widgets
-    pub fn convert_block<'a>(block: crate::widgets::Block<'a>) -> ratatui::widgets::Block<'a> {
-        let mut ratatui_block = ratatui::widgets::Block::new();
-        
-        // Convert borders
-        ratatui_block = ratatui_block.borders(convert_borders(block.get_borders()));
-        
-        // Convert border type
-        ratatui_block = ratatui_block.border_type(convert_border_type(block.get_border_type()));
-        
-        // Convert style
-        ratatui_block = ratatui_block.style(convert_style(block.get_style()));
-        
-        // Convert titles (left, center, right)
-        if let Some(title) = block.get_title() {
-            ratatui_block = ratatui_block.title(convert_spans_to_line(title.clone()));
-        }
-        
-        ratatui_block
-    }
-    
+
     /// Convert helix Constraint to ratatui Constraint
-    pub fn convert_constraint(constraint: crate::layout::Constraint) -> ratatui::layout::Constraint {
+    pub fn convert_constraint(
+        constraint: crate::layout::Constraint,
+    ) -> ratatui::layout::Constraint {
         match constraint {
             crate::layout::Constraint::Length(n) => ratatui::layout::Constraint::Length(n),
             crate::layout::Constraint::Max(n) => ratatui::layout::Constraint::Max(n),
@@ -292,12 +287,14 @@ pub mod ratatui_compat {
             crate::layout::Constraint::Ratio(a, b) => ratatui::layout::Constraint::Ratio(a, b),
         }
     }
-    
+
     /// Convert slice of helix Constraints to ratatui Constraints
-    pub fn convert_constraints(constraints: &[crate::layout::Constraint]) -> Vec<ratatui::layout::Constraint> {
+    pub fn convert_constraints(
+        constraints: &[crate::layout::Constraint],
+    ) -> Vec<ratatui::layout::Constraint> {
         constraints.iter().map(|c| convert_constraint(*c)).collect()
     }
-    
+
     /// Convert helix TableState to ratatui TableState
     pub fn convert_table_state(state: &crate::widgets::TableState) -> ratatui::widgets::TableState {
         let mut ratatui_state = ratatui::widgets::TableState::default();
@@ -310,89 +307,92 @@ pub mod ratatui_compat {
         }
         ratatui_state
     }
-    
+
     /// Update helix TableState from ratatui TableState
-    pub fn update_table_state_from_ratatui(helix_state: &mut crate::widgets::TableState, ratatui_state: &ratatui::widgets::TableState) {
+    pub fn update_table_state_from_ratatui(
+        helix_state: &mut crate::widgets::TableState,
+        ratatui_state: &ratatui::widgets::TableState,
+    ) {
         helix_state.selected = ratatui_state.selected();
         // Note: ratatui TableState doesn't expose offset publicly
         // This will be handled through the selection mechanism
     }
-    
+
     /// Convert helix table Cell to ratatui table Cell
     pub fn convert_table_cell<'a>(cell: crate::widgets::Cell<'a>) -> ratatui::widgets::Cell<'a> {
         // Use the conversion method we added to Cell
         cell.to_ratatui_cell()
     }
-    
+
     /// Convert helix table Row to ratatui table Row
     pub fn convert_table_row<'a>(row: crate::widgets::Row<'a>) -> ratatui::widgets::Row<'a> {
         // Use the conversion method we added to Row
         row.to_ratatui_row()
     }
-    
+
     /// Convert helix Table to ratatui Table
     pub fn convert_table<'a>(table: crate::widgets::Table<'a>) -> ratatui::widgets::Table<'a> {
         // Use the conversion method we added to Table
         table.to_ratatui_table()
     }
-    
+
     /// Convert helix Wrap to ratatui Wrap
     pub fn convert_wrap(wrap: crate::widgets::Wrap) -> ratatui::widgets::Wrap {
         ratatui::widgets::Wrap { trim: wrap.trim }
     }
-    
-    /// Render a Block widget using ratatui backend
-    pub fn render_block(block: crate::widgets::Block<'_>, area: Rect, surface: &mut crate::buffer::Buffer) {
-        // Convert helix Block to ratatui Block
-        let ratatui_block = convert_block(block);
-        render_ratatui_widget(ratatui_block, area, surface);
-    }
-    
+
     /// Render a Paragraph widget using ratatui backend with reference text  
-    pub fn render_paragraph_ref(text: &crate::text::Text<'_>, wrap: Option<crate::widgets::Wrap>, area: Rect, surface: &mut crate::buffer::Buffer) {
+    pub fn render_paragraph_ref(
+        text: &crate::text::Text<'_>,
+        wrap: Option<crate::widgets::Wrap>,
+        area: Rect,
+        surface: &mut crate::buffer::Buffer,
+    ) {
         // Convert helix text to ratatui text
         let ratatui_text = convert_text_ref(text);
         let mut paragraph = ratatui::widgets::Paragraph::new(ratatui_text);
-        
+
         if let Some(wrap_config) = wrap {
             paragraph = paragraph.wrap(convert_wrap(wrap_config));
         }
-        
+
         render_ratatui_widget(paragraph, area, surface);
     }
-    
+
     /// Render a Paragraph widget using ratatui backend with owned text
-    pub fn render_paragraph(text: crate::text::Text<'_>, wrap: Option<crate::widgets::Wrap>, area: Rect, surface: &mut crate::buffer::Buffer) {
+    pub fn render_paragraph(
+        text: crate::text::Text<'_>,
+        wrap: Option<crate::widgets::Wrap>,
+        area: Rect,
+        surface: &mut crate::buffer::Buffer,
+    ) {
         // Convert helix text to ratatui text
         let ratatui_text = convert_text(text);
         let mut paragraph = ratatui::widgets::Paragraph::new(ratatui_text);
-        
+
         if let Some(wrap_config) = wrap {
             paragraph = paragraph.wrap(convert_wrap(wrap_config));
         }
-        
+
         render_ratatui_widget(paragraph, area, surface);
     }
-    
+
     /// Render a ratatui widget with buffer conversion
-    pub fn render_ratatui_widget<W>(
-        widget: W,
-        area: Rect, 
-        surface: &mut crate::buffer::Buffer
-    ) where 
+    pub fn render_ratatui_widget<W>(widget: W, area: Rect, surface: &mut crate::buffer::Buffer)
+    where
         W: ratatui::widgets::Widget,
     {
         // Create a temporary ratatui buffer with the full surface area to avoid coordinate issues
         let surface_area = surface.area;
         let ratatui_surface_area = convert_rect(surface_area);
         let mut ratatui_buffer = ratatui::buffer::Buffer::empty(ratatui_surface_area);
-        
+
         // Convert the target area
         let ratatui_area = convert_rect(area);
-        
+
         // Render the ratatui widget to the ratatui buffer
         widget.render(ratatui_area, &mut ratatui_buffer);
-        
+
         // Only copy the cells within the target area, using absolute coordinates
         for y in area.top()..area.bottom() {
             for x in area.left()..area.right() {
@@ -401,66 +401,76 @@ pub mod ratatui_compat {
                     let ratatui_cell = ratatui_buffer.get(x, y);
                     if let Some(helix_cell_pos) = surface.get_mut(x, y) {
                         let mut helix_cell = convert_cell_back(ratatui_cell);
-                        
+
                         // If the original helix cell has a background but the ratatui cell doesn't,
                         // preserve the original background to maintain popup styling
                         if helix_cell.bg == Color::Reset && helix_cell_pos.bg != Color::Reset {
                             helix_cell.bg = helix_cell_pos.bg;
                         }
-                        
+
                         *helix_cell_pos = helix_cell;
                     }
                 }
             }
         }
     }
-    
+
     #[cfg(test)]
     mod tests {
         use super::*;
-        use helix_view::graphics::{Modifier};
-        
+        use helix_view::graphics::Modifier;
+
         #[test]
         fn test_color_conversion() {
             // Test basic colors
             assert_eq!(convert_color(Color::Red), ratatui::style::Color::Red);
             assert_eq!(convert_color(Color::Blue), ratatui::style::Color::Blue);
             assert_eq!(convert_color(Color::Green), ratatui::style::Color::Green);
-            
+
             // Test RGB
-            assert_eq!(convert_color(Color::Rgb(255, 128, 64)), ratatui::style::Color::Rgb(255, 128, 64));
-            
+            assert_eq!(
+                convert_color(Color::Rgb(255, 128, 64)),
+                ratatui::style::Color::Rgb(255, 128, 64)
+            );
+
             // Test indexed
-            assert_eq!(convert_color(Color::Indexed(42)), ratatui::style::Color::Indexed(42));
-            
+            assert_eq!(
+                convert_color(Color::Indexed(42)),
+                ratatui::style::Color::Indexed(42)
+            );
+
             // Test round-trip conversion
             let original = Color::LightCyan;
             let converted = convert_color(original);
             let back = convert_color_back(converted);
             assert_eq!(original, back);
         }
-        
+
         #[test]
         fn test_style_conversion() {
             let style = Style::default()
                 .fg(Color::Red)
                 .bg(Color::Blue)
                 .add_modifier(Modifier::BOLD | Modifier::ITALIC);
-            
+
             let ratatui_style = convert_style(style);
-            
+
             assert_eq!(ratatui_style.fg, Some(ratatui::style::Color::Red));
             assert_eq!(ratatui_style.bg, Some(ratatui::style::Color::Blue));
-            assert!(ratatui_style.add_modifier.contains(ratatui::style::Modifier::BOLD));
-            assert!(ratatui_style.add_modifier.contains(ratatui::style::Modifier::ITALIC));
+            assert!(ratatui_style
+                .add_modifier
+                .contains(ratatui::style::Modifier::BOLD));
+            assert!(ratatui_style
+                .add_modifier
+                .contains(ratatui::style::Modifier::ITALIC));
         }
-        
-        #[test] 
+
+        #[test]
         fn test_rect_conversion() {
             let rect = Rect::new(10, 20, 80, 24);
             let ratatui_rect = convert_rect(rect);
             let back_rect = convert_rect_back(ratatui_rect);
-            
+
             assert_eq!(rect, back_rect);
             assert_eq!(ratatui_rect.x, 10);
             assert_eq!(ratatui_rect.y, 20);
@@ -468,10 +478,4 @@ pub mod ratatui_compat {
             assert_eq!(ratatui_rect.height, 24);
         }
     }
-}
-
-#[cfg(not(feature = "ratatui-migration"))]
-pub mod ratatui_compat {
-    //! Stub module when ratatui migration feature is disabled
-    //! This allows code to conditionally compile compatibility layers
 }

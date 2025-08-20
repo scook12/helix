@@ -1,12 +1,8 @@
 use crate::compositor::{Component, Context};
-use tui::buffer::Buffer as Surface;
 use helix_view::graphics::Rect;
+use tui::buffer::Buffer as Surface;
 
-#[cfg(feature = "ratatui-migration")]
 use tui::compat::ratatui_compat::{convert_text_ref, render_ratatui_widget};
-
-#[cfg(not(feature = "ratatui-migration"))]
-use tui::widgets::{Paragraph, Widget, Wrap};
 
 pub struct Text {
     pub(crate) contents: tui::text::Text<'static>,
@@ -36,20 +32,11 @@ impl From<tui::text::Text<'static>> for Text {
 
 impl Component for Text {
     fn render(&mut self, area: Rect, surface: &mut Surface, _cx: &mut Context) {
-        #[cfg(not(feature = "ratatui-migration"))]
-        {
-            let par = Paragraph::new(&self.contents).wrap(Wrap { trim: false });
-            par.render(area, surface);
-        }
-        
-        #[cfg(feature = "ratatui-migration")]
-        {
-            // Convert helix text to ratatui text
-            let ratatui_text = convert_text_ref(&self.contents);
-            let par = ratatui::widgets::Paragraph::new(ratatui_text)
-                .wrap(ratatui::widgets::Wrap { trim: false });
-            render_ratatui_widget(par, area, surface);
-        }
+        // Convert helix text to ratatui text
+        let ratatui_text = convert_text_ref(&self.contents);
+        let par = ratatui::widgets::Paragraph::new(ratatui_text)
+            .wrap(ratatui::widgets::Wrap { trim: false });
+        render_ratatui_widget(par, area, surface);
     }
 
     fn required_size(&mut self, viewport: (u16, u16)) -> Option<(u16, u16)> {

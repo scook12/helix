@@ -5,8 +5,6 @@ use crate::{
 };
 use tui::buffer::Buffer as Surface;
 
-#[cfg(not(feature = "ratatui-migration"))]
-use tui::widgets::{Block, Widget};
 
 use helix_core::Position;
 use helix_view::{

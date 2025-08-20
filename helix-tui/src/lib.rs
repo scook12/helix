@@ -139,5 +139,4 @@ pub mod widgets;
 
 pub use self::terminal::{Terminal, TerminalOptions, Viewport};
 
-#[cfg(feature = "ratatui-migration")]
 pub use ratatui;

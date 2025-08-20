@@ -2,7 +2,7 @@ use crate::{
     buffer::Buffer,
     layout::Constraint,
     text::Text,
-    widgets::{Block, Widget},
+    widgets::{Widget, Block},
 };
 use helix_core::unicode::width::UnicodeWidthStr;
 use helix_view::graphics::{Rect, Style};
@@ -494,7 +494,6 @@ impl Widget for Table<'_> {
     }
 }
 
-#[cfg(feature = "ratatui-migration")]
 impl<'a> Cell<'a> {
     /// Convert this helix Cell to a ratatui Cell (accessing private fields)
     pub fn to_ratatui_cell(self) -> ratatui::widgets::Cell<'a> {
@@ -505,7 +504,6 @@ impl<'a> Cell<'a> {
     }
 }
 
-#[cfg(feature = "ratatui-migration")]
 impl<'a> Row<'a> {
     /// Convert this helix Row to a ratatui Row (accessing private fields)
     pub fn to_ratatui_row(self) -> ratatui::widgets::Row<'a> {
@@ -522,11 +520,10 @@ impl<'a> Row<'a> {
     }
 }
 
-#[cfg(feature = "ratatui-migration")]
 impl<'a> Table<'a> {
     /// Convert this helix Table to a ratatui Table (accessing private fields)
     pub fn to_ratatui_table(self) -> ratatui::widgets::Table<'a> {
-        use crate::compat::ratatui_compat::{convert_style, convert_constraints, convert_block};
+        use crate::compat::ratatui_compat::{convert_style, convert_constraints, convert_borders, convert_border_type};
         
         let ratatui_rows: Vec<ratatui::widgets::Row> = self.rows
             .into_iter()
@@ -545,7 +542,16 @@ impl<'a> Table<'a> {
         }
         
         if let Some(block) = self.block {
-            ratatui_table = ratatui_table.block(convert_block(block));
+            let ratatui_block = ratatui::widgets::Block::new()
+                .borders(convert_borders(block.borders))
+                .border_type(convert_border_type(block.border_type))
+                .style(convert_style(block.style));
+            let ratatui_block = if let Some(title) = block.title {
+                ratatui_block.title(title)
+            } else {
+                ratatui_block
+            };
+            ratatui_table = ratatui_table.block(ratatui_block);
         }
         
         if let Some(header) = self.header {
