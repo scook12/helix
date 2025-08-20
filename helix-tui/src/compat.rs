@@ -212,6 +212,16 @@ pub mod ratatui_compat {
         ratatui::text::Line::from(ratatui_spans)
     }
     
+    /// Convert helix Text to ratatui Text for Paragraph widgets
+    pub fn convert_text<'a>(helix_text: &'a crate::text::Text<'a>) -> ratatui::text::Text<'a> {
+        // Convert each line (Spans) to ratatui Line
+        let ratatui_lines: Vec<ratatui::text::Line> = helix_text.lines
+            .iter()
+            .map(|spans| convert_spans_to_line(spans.clone()))
+            .collect();
+        ratatui::text::Text::from(ratatui_lines)
+    }
+    
     /// Convert helix Borders to ratatui Borders (both use bitflags)
     pub fn convert_borders(borders: crate::widgets::Borders) -> ratatui::widgets::Borders {
         // Handle compound flags by checking each bit

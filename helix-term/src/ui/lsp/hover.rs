@@ -6,6 +6,14 @@ use helix_lsp::lsp;
 use helix_view::graphics::{Margin, Rect, Style};
 use helix_view::input::Event;
 use tui::buffer::Buffer;
+
+#[cfg(feature = "ratatui-migration")]
+use {
+    tui::compat::ratatui_compat::{convert_text, render_ratatui_widget},
+    tui::widgets::BorderType,
+};
+
+#[cfg(not(feature = "ratatui-migration"))]
 use tui::widgets::{BorderType, Paragraph, Widget, Wrap};
 
 use crate::compositor::{Component, Context, EventResult};
@@ -81,8 +89,19 @@ impl Component for Hover {
         if let Some(header) = header {
             // header LSP Name
             let header = header.parse(Some(&cx.editor.theme));
-            let header = Paragraph::new(&header);
-            header.render(area.with_height(HEADER_HEIGHT), surface);
+            
+            #[cfg(not(feature = "ratatui-migration"))]
+            {
+                let header = Paragraph::new(&header);
+                header.render(area.with_height(HEADER_HEIGHT), surface);
+            }
+            
+            #[cfg(feature = "ratatui-migration")]
+            {
+                let ratatui_text = convert_text(&header);
+                let header_para = ratatui::widgets::Paragraph::new(ratatui_text);
+                render_ratatui_widget(header_para, area.with_height(HEADER_HEIGHT), surface);
+            }
 
             // border
             let sep_style = Style::default();
@@ -101,10 +120,23 @@ impl Component for Hover {
         } else {
             0
         });
-        let contents_para = Paragraph::new(&contents)
-            .wrap(Wrap { trim: false })
-            .scroll((cx.scroll.unwrap_or_default() as u16, 0));
-        contents_para.render(contents_area, surface);
+        
+        #[cfg(not(feature = "ratatui-migration"))]
+        {
+            let contents_para = Paragraph::new(&contents)
+                .wrap(Wrap { trim: false })
+                .scroll((cx.scroll.unwrap_or_default() as u16, 0));
+            contents_para.render(contents_area, surface);
+        }
+        
+        #[cfg(feature = "ratatui-migration")]
+        {
+            let ratatui_text = convert_text(&contents);
+            let contents_para = ratatui::widgets::Paragraph::new(ratatui_text)
+                .wrap(ratatui::widgets::Wrap { trim: false })
+                .scroll((cx.scroll.unwrap_or_default() as u16, 0));
+            render_ratatui_widget(contents_para, contents_area, surface);
+        }
     }
 
     fn required_size(&mut self, viewport: (u16, u16)) -> Option<(u16, u16)> {

@@ -717,10 +717,18 @@ impl EditorView {
         theme: &Theme,
     ) {
         use helix_core::diagnostic::Severity;
+        
+        #[cfg(not(feature = "ratatui-migration"))]
         use tui::{
             layout::Alignment,
             text::Text,
             widgets::{Paragraph, Widget, Wrap},
+        };
+        
+        #[cfg(feature = "ratatui-migration")]
+        use {
+            tui::compat::ratatui_compat::{convert_text, render_ratatui_widget},
+            tui::text::Text,
         };
 
         let cursor = doc
@@ -761,15 +769,27 @@ impl EditorView {
         }
 
         let text = Text::from(lines);
-        let paragraph = Paragraph::new(&text)
-            .alignment(Alignment::Right)
-            .wrap(Wrap { trim: true });
         let width = 100.min(viewport.width);
         let height = 15.min(viewport.height);
-        paragraph.render(
-            Rect::new(viewport.right() - width, viewport.y + 1, width, height),
-            surface,
-        );
+        let render_area = Rect::new(viewport.right() - width, viewport.y + 1, width, height);
+        
+        #[cfg(not(feature = "ratatui-migration"))]
+        {
+            let paragraph = Paragraph::new(&text)
+                .alignment(Alignment::Right)
+                .wrap(Wrap { trim: true });
+            paragraph.render(render_area, surface);
+        }
+        
+        #[cfg(feature = "ratatui-migration")]
+        {
+            // Convert helix text to ratatui text
+            let ratatui_text = convert_text(&text);
+            let paragraph = ratatui::widgets::Paragraph::new(ratatui_text)
+                .alignment(ratatui::layout::Alignment::Right)
+                .wrap(ratatui::widgets::Wrap { trim: true });
+            render_ratatui_widget(paragraph, render_area, surface);
+        }
     }
 
     /// Apply the highlighting on the lines where a cursor is active
