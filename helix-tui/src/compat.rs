@@ -199,6 +199,76 @@ pub mod ratatui_compat {
         result
     }
     
+    /// Convert helix Spans to ratatui Line for Block titles
+    pub fn convert_spans_to_line(spans: crate::text::Spans<'_>) -> ratatui::text::Line<'_> {
+        // Convert helix Spans to ratatui Spans by converting each Span
+        let ratatui_spans: Vec<ratatui::text::Span> = spans.0
+            .into_iter()
+            .map(|span| {
+                let style = convert_style(span.style);
+                ratatui::text::Span::styled(span.content, style)
+            })
+            .collect();
+        ratatui::text::Line::from(ratatui_spans)
+    }
+    
+    /// Convert helix Borders to ratatui Borders (both use bitflags)
+    pub fn convert_borders(borders: crate::widgets::Borders) -> ratatui::widgets::Borders {
+        // Handle compound flags by checking each bit
+        let mut result = ratatui::widgets::Borders::empty();
+        if borders.contains(crate::widgets::Borders::TOP) {
+            result |= ratatui::widgets::Borders::TOP;
+        }
+        if borders.contains(crate::widgets::Borders::RIGHT) {
+            result |= ratatui::widgets::Borders::RIGHT;
+        }
+        if borders.contains(crate::widgets::Borders::BOTTOM) {
+            result |= ratatui::widgets::Borders::BOTTOM;
+        }
+        if borders.contains(crate::widgets::Borders::LEFT) {
+            result |= ratatui::widgets::Borders::LEFT;
+        }
+        result
+    }
+    
+    /// Convert helix BorderType to ratatui BorderType
+    pub fn convert_border_type(border_type: crate::widgets::BorderType) -> ratatui::widgets::BorderType {
+        match border_type {
+            crate::widgets::BorderType::Plain => ratatui::widgets::BorderType::Plain,
+            crate::widgets::BorderType::Rounded => ratatui::widgets::BorderType::Rounded,
+            crate::widgets::BorderType::Double => ratatui::widgets::BorderType::Double,
+            crate::widgets::BorderType::Thick => ratatui::widgets::BorderType::Thick,
+        }
+    }
+    
+    /// Render a ratatui widget with buffer conversion
+    pub fn render_ratatui_widget<W>(
+        widget: W,
+        area: Rect, 
+        surface: &mut crate::buffer::Buffer
+    ) where 
+        W: ratatui::widgets::Widget,
+    {
+        // Create a temporary ratatui buffer
+        let ratatui_area = convert_rect(area);
+        let mut ratatui_buffer = ratatui::buffer::Buffer::empty(ratatui_area);
+        
+        // Render the ratatui widget to the ratatui buffer
+        widget.render(ratatui_area, &mut ratatui_buffer);
+        
+        // Copy the rendered content back to the helix buffer
+        for y in ratatui_area.top()..ratatui_area.bottom() {
+            for x in ratatui_area.left()..ratatui_area.right() {
+                // ratatui buffer.get() returns &Cell directly (not Option)
+                let ratatui_cell = ratatui_buffer.get(x, y);
+                if let Some(helix_cell_pos) = surface.get_mut(x, y) {
+                    let helix_cell = convert_cell_back(ratatui_cell);
+                    *helix_cell_pos = helix_cell;
+                }
+            }
+        }
+    }
+    
     #[cfg(test)]
     mod tests {
         use super::*;
