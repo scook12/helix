@@ -318,6 +318,62 @@ pub mod ratatui_compat {
         // This will be handled through the selection mechanism
     }
     
+    /// Convert helix table Cell to ratatui table Cell
+    pub fn convert_table_cell<'a>(cell: crate::widgets::Cell<'a>) -> ratatui::widgets::Cell<'a> {
+        // Use the conversion method we added to Cell
+        cell.to_ratatui_cell()
+    }
+    
+    /// Convert helix table Row to ratatui table Row
+    pub fn convert_table_row<'a>(row: crate::widgets::Row<'a>) -> ratatui::widgets::Row<'a> {
+        // Use the conversion method we added to Row
+        row.to_ratatui_row()
+    }
+    
+    /// Convert helix Table to ratatui Table
+    pub fn convert_table<'a>(table: crate::widgets::Table<'a>) -> ratatui::widgets::Table<'a> {
+        // Use the conversion method we added to Table
+        table.to_ratatui_table()
+    }
+    
+    /// Convert helix Wrap to ratatui Wrap
+    pub fn convert_wrap(wrap: crate::widgets::Wrap) -> ratatui::widgets::Wrap {
+        ratatui::widgets::Wrap { trim: wrap.trim }
+    }
+    
+    /// Render a Block widget using ratatui backend
+    pub fn render_block(block: crate::widgets::Block<'_>, area: Rect, surface: &mut crate::buffer::Buffer) {
+        // Convert helix Block to ratatui Block
+        let ratatui_block = convert_block(block);
+        render_ratatui_widget(ratatui_block, area, surface);
+    }
+    
+    /// Render a Paragraph widget using ratatui backend with reference text  
+    pub fn render_paragraph_ref(text: &crate::text::Text<'_>, wrap: Option<crate::widgets::Wrap>, area: Rect, surface: &mut crate::buffer::Buffer) {
+        // Convert helix text to ratatui text
+        let ratatui_text = convert_text_ref(text);
+        let mut paragraph = ratatui::widgets::Paragraph::new(ratatui_text);
+        
+        if let Some(wrap_config) = wrap {
+            paragraph = paragraph.wrap(convert_wrap(wrap_config));
+        }
+        
+        render_ratatui_widget(paragraph, area, surface);
+    }
+    
+    /// Render a Paragraph widget using ratatui backend with owned text
+    pub fn render_paragraph(text: crate::text::Text<'_>, wrap: Option<crate::widgets::Wrap>, area: Rect, surface: &mut crate::buffer::Buffer) {
+        // Convert helix text to ratatui text
+        let ratatui_text = convert_text(text);
+        let mut paragraph = ratatui::widgets::Paragraph::new(ratatui_text);
+        
+        if let Some(wrap_config) = wrap {
+            paragraph = paragraph.wrap(convert_wrap(wrap_config));
+        }
+        
+        render_ratatui_widget(paragraph, area, surface);
+    }
+    
     /// Render a ratatui widget with buffer conversion
     pub fn render_ratatui_widget<W>(
         widget: W,

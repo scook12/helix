@@ -23,13 +23,11 @@ use tui::{
     buffer::Buffer as Surface,
     layout::Constraint,
     text::{Span, Spans},
-    widgets::{Block, BorderType, Cell, Row},
+    widgets::{BorderType, Cell, Row, Table},
 };
 
 #[cfg(not(feature = "ratatui-migration"))]
-use tui::widgets::Table;
-
-use tui::widgets::Widget;
+use tui::widgets::{Block, Widget};
 
 use std::{
     borrow::Cow,
@@ -690,12 +688,12 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         let background = cx.editor.theme.get("ui.background");
         surface.clear_with(area, background);
 
-        const BLOCK: Block<'_> = Block::bordered();
+        let block = super::widget_compat::bordered_block();
 
         // calculate the inner area inside the box
-        let inner = BLOCK.inner(area);
+        let inner = super::widget_compat::get_block_inner_area(&block, area);
 
-        BLOCK.render(area, surface);
+        super::widget_compat::render_block_widget(block, area, surface);
 
         // -- Render the input bar:
 
@@ -826,110 +824,41 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
             }))
         });
 
-        #[cfg(not(feature = "ratatui-migration"))]
-        {
-            let mut table = Table::new(options)
-                .style(text_style)
-                .highlight_style(selected)
-                .highlight_symbol(" > ")
-                .column_spacing(1)
-                .widths(&self.widths);
+        let mut table = Table::new(options)
+            .style(text_style)
+            .highlight_style(selected)
+            .highlight_symbol(" > ")
+            .column_spacing(1)
+            .widths(&self.widths);
 
-            // -- Header
-            if self.columns.len() > 1 {
-                let active_column = self.query.active_column(self.prompt.position());
-                let header_style = cx.editor.theme.get("ui.picker.header");
-                let header_column_style = cx.editor.theme.get("ui.picker.header.column");
+        // -- Header
+        if self.columns.len() > 1 {
+            let active_column = self.query.active_column(self.prompt.position());
+            let header_style = cx.editor.theme.get("ui.picker.header");
+            let header_column_style = cx.editor.theme.get("ui.picker.header.column");
 
-                table = table.header(
-                    Row::new(self.columns.iter().map(|column| {
-                        if column.hidden {
-                            Cell::default()
-                        } else {
-                            let style =
-                                if active_column.is_some_and(|name| Arc::ptr_eq(name, &column.name)) {
-                                    cx.editor.theme.get("ui.picker.header.column.active")
-                                } else {
-                                    header_column_style
-                                };
+            table = table.header(
+                Row::new(self.columns.iter().map(|column| {
+                    if column.hidden {
+                        Cell::default()
+                    } else {
+                        let style =
+                            if active_column.is_some_and(|name| Arc::ptr_eq(name, &column.name)) {
+                                cx.editor.theme.get("ui.picker.header.column.active")
+                            } else {
+                                header_column_style
+                            };
 
-                            Cell::from(Span::styled(Cow::from(&*column.name), style))
-                        }
-                    }))
-                    .style(header_style),
-                );
-            }
-
-            use tui::widgets::TableState;
-
-            table.render_table(
-                inner,
-                surface,
-                &mut TableState {
-                    offset: 0,
-                    selected: Some(cursor as usize),
-                },
-                self.truncate_start,
+                        Cell::from(Span::styled(Cow::from(&*column.name), style))
+                    }
+                }))
+                .style(header_style),
             );
         }
-        
-        #[cfg(feature = "ratatui-migration")]
-        {
-            let mut table = tui::widgets::Table::new(options)
-                .style(text_style)
-                .highlight_style(selected)
-                .highlight_symbol(" > ")
-                .column_spacing(1)
-                .widths(&self.widths);
 
-            // -- Header
-            if self.columns.len() > 1 {
-                let active_column = self.query.active_column(self.prompt.position());
-                let header_style = cx.editor.theme.get("ui.picker.header");
-                let header_column_style = cx.editor.theme.get("ui.picker.header.column");
-
-                table = table.header(
-                    Row::new(self.columns.iter().map(|column| {
-                        if column.hidden {
-                            Cell::default()
-                        } else {
-                            let style =
-                                if active_column.is_some_and(|name| Arc::ptr_eq(name, &column.name)) {
-                                    cx.editor.theme.get("ui.picker.header.column.active")
-                                } else {
-                                    header_column_style
-                                };
-
-                            Cell::from(Span::styled(Cow::from(&*column.name), style))
-                        }
-                    }))
-                    .style(header_style),
-                );
-            }
-
-            let ratatui_table = table.to_ratatui_table();
-            let mut ratatui_state = tui::compat::ratatui_compat::convert_table_state(&tui::widgets::TableState {
-                offset: 0,
-                selected: Some(cursor as usize),
-            });
-            
-            // Render with ratatui
-            use ratatui::widgets::StatefulWidget;
-            let ratatui_area = tui::compat::ratatui_compat::convert_rect(inner);
-            let mut ratatui_buffer = ratatui::buffer::Buffer::empty(ratatui_area);
-            ratatui_table.render(ratatui_area, &mut ratatui_buffer, &mut ratatui_state);
-            
-            // Copy back to helix buffer
-            for y in ratatui_area.top()..ratatui_area.bottom() {
-                for x in ratatui_area.left()..ratatui_area.right() {
-                    let ratatui_cell = ratatui_buffer.get(x, y);
-                    if let Some(helix_cell_pos) = surface.get_mut(x, y) {
-                        let helix_cell = tui::compat::ratatui_compat::convert_cell_back(ratatui_cell);
-                        *helix_cell_pos = helix_cell;
-                    }
-                }
-            }
-        }
+        use super::table_compat;
+        let mut state = table_compat::table_state(0, Some(cursor as usize));
+        table_compat::render_table(table, inner, surface, &mut state, self.truncate_start);
     }
 
     fn render_preview(&mut self, area: Rect, surface: &mut Surface, cx: &mut Context) {
@@ -940,14 +869,14 @@ impl<T: 'static + Send + Sync, D: 'static + Send + Sync> Picker<T, D> {
         let directory = cx.editor.theme.get("ui.text.directory");
         surface.clear_with(area, background);
 
-        const BLOCK: Block<'_> = Block::bordered();
+        let block = super::widget_compat::bordered_block();
 
         // calculate the inner area inside the box
-        let inner = BLOCK.inner(area);
+        let inner = super::widget_compat::get_block_inner_area(&block, area);
         // 1 column gap on either side
         let margin = Margin::horizontal(1);
         let inner = inner.inner(margin);
-        BLOCK.render(area, surface);
+        super::widget_compat::render_block_widget(block, area, surface);
 
         if let Some((preview, range)) = self.get_preview(cx.editor) {
             let doc = match preview.document() {
@@ -1204,9 +1133,9 @@ impl<I: 'static + Send + Sync, D: 'static + Send + Sync> Component for Picker<I,
     }
 
     fn cursor(&self, area: Rect, editor: &Editor) -> (Option<Position>, CursorKind) {
-        let block = Block::bordered();
+        let block = super::widget_compat::bordered_block();
         // calculate the inner area inside the box
-        let inner = block.inner(area);
+        let inner = super::widget_compat::get_block_inner_area(&block, area);
 
         // prompt area
         let render_preview =

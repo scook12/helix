@@ -3,10 +3,10 @@ use crate::{
     compositor::{Callback, Component, Context, Event, EventResult},
     ctrl, key,
 };
-use tui::{
-    buffer::Buffer as Surface,
-    widgets::{Block, Widget},
-};
+use tui::buffer::Buffer as Surface;
+
+#[cfg(not(feature = "ratatui-migration"))]
+use tui::widgets::{Block, Widget};
 
 use helix_core::Position;
 use helix_view::{
@@ -324,7 +324,8 @@ impl<T: Component> Component for Popup<T> {
         let mut inner = area;
         if render_borders {
             inner = area.inner(Margin::all(1));
-            Widget::render(Block::bordered(), area, surface);
+            let block = super::widget_compat::bordered_block();
+            super::widget_compat::render_block_widget(block, area, surface);
         }
         let border = usize::from(render_borders);
 

@@ -31,7 +31,7 @@ use helix_view::graphics::{Rect, Style};
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Cell<'a> {
     pub content: Text<'a>,
-    style: Style,
+    pub(crate) style: Style,
 }
 
 impl Cell<'_> {
@@ -76,9 +76,9 @@ where
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Row<'a> {
     pub cells: Vec<Cell<'a>>,
-    height: u16,
-    style: Style,
-    bottom_margin: u16,
+    pub(crate) height: u16,
+    pub(crate) style: Style,
+    pub(crate) bottom_margin: u16,
 }
 
 impl<'a> Row<'a> {
@@ -187,21 +187,21 @@ impl<'a, T: Into<Cell<'a>>> From<T> for Row<'a> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Table<'a> {
     /// A block to wrap the widget in
-    block: Option<Block<'a>>,
+    pub(crate) block: Option<Block<'a>>,
     /// Base style for the widget
-    style: Style,
+    pub(crate) style: Style,
     /// Width constraints for each column
-    widths: &'a [Constraint],
+    pub(crate) widths: &'a [Constraint],
     /// Space between each column
-    column_spacing: u16,
+    pub(crate) column_spacing: u16,
     /// Style used to render the selected row
-    highlight_style: Style,
+    pub(crate) highlight_style: Style,
     /// Symbol in front of the selected rom
-    highlight_symbol: Option<&'a str>,
+    pub(crate) highlight_symbol: Option<&'a str>,
     /// Optional header
-    header: Option<Row<'a>>,
+    pub(crate) header: Option<Row<'a>>,
     /// Data to display in each row
-    rows: Vec<Row<'a>>,
+    pub(crate) rows: Vec<Row<'a>>,
 }
 
 impl<'a> Table<'a> {
