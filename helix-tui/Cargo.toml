@@ -28,3 +28,10 @@ ratatui = { version = "0.26", optional = true, default-features = false, feature
 termini = "1.0"
 once_cell = "1.21"
 log = "~0.4"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "backend_performance"
+harness = false
