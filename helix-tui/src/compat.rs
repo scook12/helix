@@ -382,21 +382,34 @@ pub mod ratatui_compat {
     ) where 
         W: ratatui::widgets::Widget,
     {
-        // Create a temporary ratatui buffer
+        // Create a temporary ratatui buffer with the full surface area to avoid coordinate issues
+        let surface_area = surface.area;
+        let ratatui_surface_area = convert_rect(surface_area);
+        let mut ratatui_buffer = ratatui::buffer::Buffer::empty(ratatui_surface_area);
+        
+        // Convert the target area
         let ratatui_area = convert_rect(area);
-        let mut ratatui_buffer = ratatui::buffer::Buffer::empty(ratatui_area);
         
         // Render the ratatui widget to the ratatui buffer
         widget.render(ratatui_area, &mut ratatui_buffer);
         
-        // Copy the rendered content back to the helix buffer
-        for y in ratatui_area.top()..ratatui_area.bottom() {
-            for x in ratatui_area.left()..ratatui_area.right() {
-                // ratatui buffer.get() returns &Cell directly (not Option)
-                let ratatui_cell = ratatui_buffer.get(x, y);
-                if let Some(helix_cell_pos) = surface.get_mut(x, y) {
-                    let helix_cell = convert_cell_back(ratatui_cell);
-                    *helix_cell_pos = helix_cell;
+        // Only copy the cells within the target area, using absolute coordinates
+        for y in area.top()..area.bottom() {
+            for x in area.left()..area.right() {
+                // Check bounds to prevent out-of-bounds access
+                if x < surface_area.right() && y < surface_area.bottom() {
+                    let ratatui_cell = ratatui_buffer.get(x, y);
+                    if let Some(helix_cell_pos) = surface.get_mut(x, y) {
+                        let mut helix_cell = convert_cell_back(ratatui_cell);
+                        
+                        // If the original helix cell has a background but the ratatui cell doesn't,
+                        // preserve the original background to maintain popup styling
+                        if helix_cell.bg == Color::Reset && helix_cell_pos.bg != Color::Reset {
+                            helix_cell.bg = helix_cell_pos.bg;
+                        }
+                        
+                        *helix_cell_pos = helix_cell;
+                    }
                 }
             }
         }

@@ -42,7 +42,14 @@ pub fn render_table<'a>(
             for x in ratatui_area.left()..ratatui_area.right() {
                 let ratatui_cell = ratatui_buffer.get(x, y);
                 if let Some(helix_cell_pos) = surface.get_mut(x, y) {
-                    let helix_cell = tui::compat::ratatui_compat::convert_cell_back(ratatui_cell);
+                    let mut helix_cell = tui::compat::ratatui_compat::convert_cell_back(ratatui_cell);
+                    
+                    // If the original helix cell has a background but the ratatui cell doesn't,
+                    // preserve the original background to maintain popup styling
+                    if helix_cell.bg == helix_view::graphics::Color::Reset && helix_cell_pos.bg != helix_view::graphics::Color::Reset {
+                        helix_cell.bg = helix_cell_pos.bg;
+                    }
+                    
                     *helix_cell_pos = helix_cell;
                 }
             }
